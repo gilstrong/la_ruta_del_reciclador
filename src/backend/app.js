@@ -1,9 +1,9 @@
-// app.js
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const session = require('express-session');
+require('dotenv').config(); // Cargar variables de entorno del archivo .env
 const Usuario = require('./models/Usuario');
 const Punto = require('./models/punto');
 
@@ -18,12 +18,10 @@ app.use(session({
 }));
 
 // --- Conexión a MongoDB ---
-mongoose.connect('mongodb://127.0.0.1:27017/rutaReciclador', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('✅ Conectado a MongoDB'))
-.catch(err => console.error('❌ Error conectando a MongoDB:', err));
+// Conexión a MongoDB usando la URI de la variable de entorno
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
+  .catch(err => console.error('❌ Error de conexión:', err));
 
 // --- Archivos estáticos ---
 app.use('/styles', express.static(path.join(__dirname, '..', 'styles')));
@@ -32,7 +30,7 @@ app.use('/model', express.static(path.join(__dirname, '..', '..', 'public', 'mod
 app.use('/images', express.static(path.join(__dirname, '..', '..', 'public', 'images')));
 
 // --- Rutas HTML y redirecciones para páginas no-dinámicas ---
-const páginas = ['index','mapa','registro','login','perfil','residuos'];
+const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos'];
 páginas.forEach(p => {
   app.get(`/${p}`, (req, res) =>
     res.sendFile(path.join(__dirname, '..', 'pages', `${p}.html`))
@@ -132,8 +130,6 @@ app.post('/sumar-punto', async (req, res) => {
     res.status(500).json({ error: 'Error al sumar punto' });
   }
 });
-
-
 
 // --- API: Guardar ubicaciones ---
 app.post('/api/ubicaciones', async (req, res) => {
