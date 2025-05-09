@@ -1,0 +1,53 @@
+[33mcommit 92cd56e86795f5f84890931af1730825dce152b2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Wed Apr 30 08:12:25 2025 -0400
+
+    Cambios con el servidor y mongo db
+
+[33mcommit c894e188a87e9bfef4ef67abd3b0f0d6c49d7ce3[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Mon Apr 28 09:21:41 2025 -0400
+
+    Add initial backend package.json with express dependency
+
+[33mcommit 1e59f2285e7fd4b273d459032e9857045fd61b61[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Sun Apr 27 12:25:57 2025 -0400
+
+    Refactor HTML structure and improve navigation; update feature links and styles
+
+[33mcommit 70ca8b1f4492b3bbeafd2e554f7f44e971bd17f9[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Sun Apr 27 11:55:25 2025 -0400
+
+    Add map functionality and feature cards for recycling locations
+
+[33mcommit 670dc68cb1c812360f94f2c42559ee159075bf95[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Sun Apr 27 11:05:39 2025 -0400
+
+    Add VSCode settings for Live Server configuration
+
+[33mcommit 21c41bd3dfbb6e2d117adbee9c3af4ea109353f1[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Sat Apr 26 17:26:46 2025 -0400
+
+    Enhance homepage layout and navigation; add hero and features sections
+
+[33mcommit 4d47b8b8437666f61b8e377c9e6bc39ebac7f0cd[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Sat Apr 26 16:10:09 2025 -0400
+
+    Add HTML structure and CSS styles for the main page
+
+[33mcommit 3194ad063eca80288ecbf2aae51a94aef9de0591[m
+Author: Jaime Gil <jaimejunior622@gmail.com>
+Date:   Sat Apr 26 15:42:35 2025 -0400
+
+    Add initial HTML structure for the project
+
+[33mcommit 1a271d3f275e044152364e0fc93caeb5a316efa8[m
+Author: gilstrong <114637250+gilstrong@users.noreply.github.com>
+Date:   Sat Apr 26 15:18:10 2025 -0400
+
+    Initial commit

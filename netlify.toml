@@ -1,0 +1,13 @@
+[build]
+  # Indica el directorio donde están los archivos estáticos y frontend
+  publish = "src"  # Carpeta que contiene todos los archivos estáticos como pages, styles, etc.
+
+  # Si tu proyecto tiene un script específico para compilar/crear el proyecto, puedes indicar eso aquí
+  command = "npm run build"  # Ajusta esto si tienes un script que necesitas ejecutar
+
+[[redirects]]
+  # Redirecciones para API, ajusta según cómo manejas tus endpoints
+  from = "/api/*"
+  to = "http://localhost:3000/api/:splat"  # Cambia esto cuando tengas un backend en producción
+  status = 200
+  force = true
