@@ -9,6 +9,14 @@ const Punto = require('./models/punto');
 
 const app = express();
 
+const cors = require('cors');
+
+app.use(cors({
+  origin: 'https://TU-FRONTEND.netlify.app', // reemplaza con tu URL de Netlify
+  credentials: true
+}));
+
+
 // --- Middleware ---
 app.use(express.json());
 app.use(session({
