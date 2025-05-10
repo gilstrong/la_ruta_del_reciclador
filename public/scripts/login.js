@@ -11,13 +11,14 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
   }
 
   try {
-    // Hacer la solicitud POST a la API de inicio de sesión
-    const response = await fetch('/api/login', {
+    // Hacer la solicitud POST a la API de inicio de sesión con la URL completa del backend
+    const response = await fetch('https://tu-backend.railway.app/api/login', {  // Cambia a la URL correcta de tu backend
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ nombre }),
+      credentials: 'include' // Importante para manejar sesiones
     });
 
     const data = await response.json();
