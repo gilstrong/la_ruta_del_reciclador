@@ -11,11 +11,11 @@ const app = express();
 
 const cors = require('cors');
 
+// Configuración de CORS
 app.use(cors({
   origin: 'https://TU-FRONTEND.netlify.app', // reemplaza con tu URL de Netlify
   credentials: true
 }));
-
 
 // --- Middleware ---
 app.use(express.json());
@@ -26,29 +26,29 @@ app.use(session({
 }));
 
 // --- Conexión a MongoDB ---
-// Conexión a MongoDB usando la URI de la variable de entorno
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Conectado a MongoDB Atlas'))
   .catch(err => console.error('❌ Error de conexión:', err));
 
 // --- Archivos estáticos ---
-app.use('/styles', express.static(path.join(__dirname, '..', 'styles')));
-app.use('/scripts', express.static(path.join(__dirname, '..', '..', 'public', 'scripts')));
-app.use('/model', express.static(path.join(__dirname, '..', '..', 'public', 'model')));
-app.use('/images', express.static(path.join(__dirname, '..', '..', 'public', 'images')));
+// Corregí las rutas estáticas
+app.use('/styles', express.static(path.join(__dirname, 'styles')));
+app.use('/scripts', express.static(path.join(__dirname, 'public', 'scripts')));
+app.use('/model', express.static(path.join(__dirname, 'public', 'model')));
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // --- Rutas HTML y redirecciones para páginas no-dinámicas ---
 const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos'];
 páginas.forEach(p => {
   app.get(`/${p}`, (req, res) =>
-    res.sendFile(path.join(__dirname, '..', 'pages', `${p}.html`))
+    res.sendFile(path.join(__dirname, 'pages', `${p}.html`))
   );
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
 });
 
 // --- RUTA DINÁMICA para /rutas: inyectar window.USUARIO ---
 app.get('/rutas', (req, res) => {
-  const filePath = path.join(__dirname, '..', 'pages', 'rutas.html');
+  const filePath = path.join(__dirname, 'pages', 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
     if (err) return res.status(500).send('Error cargando rutas.html');
     const username = req.session.nombre || '';
