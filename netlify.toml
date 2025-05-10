@@ -1,5 +1,5 @@
 [build]
-publish = "src"
+publish = "src/pages"
 
 [[redirects]]
 from = "/"
