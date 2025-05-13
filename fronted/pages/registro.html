@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro</title>
+  <link rel="stylesheet" href="../styles/registro.css" />
+</head>
+<body>
+  <div class="registro-container">
+    <div class="registro-fondo"></div>
+
+    <div class="registro-form">
+      <h1>Regístrate</h1>
+      <form id="formRegistro">
+        <input type="text" id="nombre" placeholder="Ingresa tu nombre" required />
+        <button type="submit">Registrarme</button>
+        <p id="mensajeError" style="color: red;"></p>
+      </form>
+      <a href="/">Volver al inicio</a>
+    </div>
+  </div>
+
+  <script>
+    // código javaScript que envia el formulario de registro al backend
+    document.getElementById('formRegistro').addEventListener('submit', async function (e) {
+      e.preventDefault();  // Evita que el formulario se envíe de manera tradicional
+
+      const nombre = document.getElementById('nombre').value.trim().toLowerCase(); //   nombre en minúsculas
+
+      try {
+        const respuesta = await fetch('/api/registrar-usuario', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre }), // enviar el nombre al backend
+        });
+
+        const data = await respuesta.json();
+
+        if (respuesta.ok) {
+          // Si el registro es exitoso, redirigir al mapa con el nombre del usuario
+          window.location.href = `/mapa?nombre=${encodeURIComponent(nombre)}`;
+        } else {
+          // Mostrar mensaje de error si no se pudo registrar
+          document.getElementById('mensajeError').textContent = data.error || 'Error al registrar.';
+        }
+      } catch (error) {
+        // Si hay un error de conexión, mostrar mensaje de error
+        document.getElementById('mensajeError').textContent = 'Error de conexión con el servidor.';
+        console.error('Error al registrar:', error);
+      }
+    });
+  </script>
+</body>
+</html>
