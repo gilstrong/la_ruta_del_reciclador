@@ -3,10 +3,7 @@ const mongoose = require('mongoose');
 // Conectar a MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect('MONGO_URI=mongodb+srv://groupfive:groupfive@cluster0.zbfzlql.mongodb.net/reciclador?retryWrites=true&w=majority', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGO_URI); // solo la URL, sin opciones obsoletas
     console.log('Conectado a MongoDB');
   } catch (error) {
     console.error('Error al conectar a MongoDB:', error);
