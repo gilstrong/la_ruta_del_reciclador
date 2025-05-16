@@ -1,11 +1,13 @@
 // app.js
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const session = require('express-session');
-const Usuario = require('./models/Usuario');
-const Punto = require('./models/punto');
+const Usuario = require('./usuario');
+const Punto = require('./punto');
+
 
 const app = express();
 
@@ -26,28 +28,36 @@ mongoose.connect('mongodb://127.0.0.1:27017/rutaReciclador', {
 .catch(err => console.error('❌ Error conectando a MongoDB:', err));
 
 // --- Archivos estáticos ---
-app.use('/styles', express.static(path.join(__dirname, '..', 'styles')));
-app.use('/scripts', express.static(path.join(__dirname, '..', '..', 'public', 'scripts')));
-app.use('/model', express.static(path.join(__dirname, '..', '..', 'public', 'model')));
-app.use('/images', express.static(path.join(__dirname, '..', '..', 'public', 'images')));
+const frontendPath = path.join(__dirname, '..', 'frontend');
+
+
+// Archivos estáticos
+app.use('/styles', express.static(path.join(__dirname, '..', 'frontend', 'styles')));
+app.use('/scripts', express.static(path.join(__dirname, '..', 'frontend', 'scripts')));
+app.use('/images', express.static(path.join(__dirname, '..', 'frontend', 'images')));
+app.use('/model', express.static(path.join(__dirname, '..', 'frontend', 'model')));
+
+
 
 // --- Rutas HTML y redirecciones para páginas no-dinámicas ---
-const páginas = ['index','mapa','registro','login','perfil','residuos'];
+const pagesPath = path.join(frontendPath, 'pages');
+
+const páginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
 páginas.forEach(p => {
   app.get(`/${p}`, (req, res) =>
-    res.sendFile(path.join(__dirname, '..', 'pages', `${p}.html`))
+    res.sendFile(path.join(pagesPath, `${p}.html`))
   );
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
 });
 
+
 // --- RUTA DINÁMICA para /rutas: inyectar window.USUARIO ---
 app.get('/rutas', (req, res) => {
-  const filePath = path.join(__dirname, '..', 'pages', 'rutas.html');
+  const filePath = path.join(pagesPath, 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
     if (err) return res.status(500).send('Error cargando rutas.html');
     const username = req.session.nombre || '';
     const script = `<script>window.USUARIO = ${JSON.stringify(username)};</script>`;
-    // Insertamos justo antes de </head>
     const result = html.replace('</head>', `${script}\n</head>`);
     res.send(result);
   });
