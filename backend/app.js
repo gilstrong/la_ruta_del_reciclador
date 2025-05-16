@@ -1,13 +1,12 @@
 // app.js
 require('dotenv').config();
+const connectDB = require('./db'); // Importa la función para conectar a la DB
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const mongoose = require('mongoose');
 const session = require('express-session');
 const Usuario = require('./usuario');
 const Punto = require('./punto');
-
 
 const app = express();
 
@@ -20,27 +19,22 @@ app.use(session({
 }));
 
 // --- Conexión a MongoDB ---
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-
-.then(() => console.log('✅ Conectado a MongoDB'))
-.catch(err => console.error('❌ Error conectando a MongoDB:', err));
+connectDB()
+  .then(() => console.log('✅ Conectado a MongoDB'))
+  .catch(err => {
+    console.error('❌ Error conectando a MongoDB:', err);
+    process.exit(1);
+  });
 
 // --- Archivos estáticos ---
 const frontendPath = path.join(__dirname, '..', 'frontend');
 
+app.use('/styles', express.static(path.join(frontendPath, 'styles')));
+app.use('/scripts', express.static(path.join(frontendPath, 'scripts')));
+app.use('/images', express.static(path.join(frontendPath, 'images')));
+app.use('/model', express.static(path.join(frontendPath, 'model')));
 
-// Archivos estáticos
-app.use('/styles', express.static(path.join(__dirname, '..', 'frontend', 'styles')));
-app.use('/scripts', express.static(path.join(__dirname, '..', 'frontend', 'scripts')));
-app.use('/images', express.static(path.join(__dirname, '..', 'frontend', 'images')));
-app.use('/model', express.static(path.join(__dirname, '..', 'frontend', 'model')));
-
-
-
-// --- Rutas HTML y redirecciones para páginas no-dinámicas ---
+// --- Rutas HTML y redirecciones ---
 const pagesPath = path.join(frontendPath, 'pages');
 
 const páginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
@@ -50,7 +44,6 @@ páginas.forEach(p => {
   );
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
 });
-
 
 // --- RUTA DINÁMICA para /rutas: inyectar window.USUARIO ---
 app.get('/rutas', (req, res) => {
@@ -144,8 +137,6 @@ app.post('/sumar-punto', async (req, res) => {
   }
 });
 
-
-
 // --- API: Guardar ubicaciones ---
 app.post('/api/ubicaciones', async (req, res) => {
   const { usuarioId, latitud, longitud, puntos } = req.body;
@@ -195,7 +186,8 @@ app.get('/api/ubicaciones', async (req, res) => {
 });
 
 // --- Iniciar servidor ---
-const port = 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
+
