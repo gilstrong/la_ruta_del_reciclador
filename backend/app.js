@@ -1,32 +1,30 @@
 require('dotenv').config();
-const connectDB = require('./db'); // Importa la función para conectar a la DB
+const connectDB = require('./db'); // Función para conectar a la DB
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
-const cors = require('cors');
+const cors = require('cors'); // Importar cors
 const Usuario = require('./usuario');
 const Punto = require('./punto');
 
 const app = express();
 
 // --- Middleware ---
-app.use(express.json());
-
-// --- Habilitar CORS para permitir peticiones desde el frontend (ajusta el origin si quieres) ---
+// Habilitar CORS para frontend https://larutadelreciclador.netlify.app
 app.use(cors({
-  origin: 'https://larutadelreciclador.netlify.app', // Cambia a '*' para permitir todos (solo desarrollo)
+  origin: 'https://larutadelreciclador.netlify.app',
   credentials: true
 }));
 
+app.use(express.json());
 app.use(session({
   secret: 'mi_clave_secreta',
   resave: false,
   saveUninitialized: true,
   cookie: {
-    secure: false, // Cambia a true si usas HTTPS
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
+    sameSite: 'none', // para que funcione en sitios cruzados (netlify -> backend)
+    secure: true      // requiere HTTPS en producción, si pruebas local cambia a false
   }
 }));
 
@@ -48,8 +46,8 @@ app.use('/model', express.static(path.join(frontendPath, 'model')));
 
 // --- Rutas HTML y redirecciones ---
 const pagesPath = path.join(frontendPath, 'pages');
+const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
 
-const páginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
 páginas.forEach(p => {
   app.get(`/${p}`, (req, res) =>
     res.sendFile(path.join(pagesPath, `${p}.html`))
