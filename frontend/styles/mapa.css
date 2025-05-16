@@ -1,0 +1,61 @@
+/* mapa.css */
+h1 {
+    padding-top: 50px;
+    text-align: center;
+    font-size: 3rem;
+    color: #4CAF50;
+    margin: 40px 0 20px; /* Aumenté el margen superior */
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 10px;
+    padding: 100px;
+    border-radius: 10px;
+    z-index: 10; /* Asegura que el h1 esté por encima si hay conflicto */
+  }
+
+#map {
+  
+    width: 100%;
+    height: 500px;
+     margin-top: 0px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+ 
+ 
+  #btnUbicacion {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50; /* Verde reciclaje */
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  #btnUbicacion:hover {
+    background-color: #45a049; /* Un verde más oscuro al pasar el mouse */
+  }
+  
+  #btnUbicacion, #btnBorrarTodo {
+    display: block;
+    margin: 10px auto;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  #btnUbicacion:hover, #btnBorrarTodo:hover {
+    background-color: #45a049;
+  }
+  
+  

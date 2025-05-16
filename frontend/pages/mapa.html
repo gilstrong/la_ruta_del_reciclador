@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>La Ruta del reciclador</title>
+
+  <!-- Estilos de Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <!-- Tus estilos -->
+  <link rel="stylesheet" href="/styles/main.css" />
+  <link rel="stylesheet" href="/styles/mapa.css" />
+</head>
+<body>
+  <!-- Navbar -->
+  <header>
+    <nav class="navbar">
+      <div class="logo"><h2>Ruta del Reciclador</h2></div>
+      <ul class="nav-links">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="mapa.html">Mapa</a></li>
+        <li><a href="perfil.html">Perfil</a></li>
+        <li><a href="rutas.html">Rutas</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Título -->
+  <h1>Mapa de Reciclaje</h1>
+
+  <!-- Mapa -->
+  <div id="map" style="width: 100%; height: 500px;"></div>
+
+  <!-- Botones -->
+  <button id="btnUbicacion">Agregar mi ubicación actual</button>
+  <button id="btnBorrarTodo">Borrar todos los puntos</button>
+
+  <!-- Contenedor para errores -->
+  <div id="mensajeError" style="color: red;"></div>
+
+  <!-- Scripts (Leaflet + funcionalidad del mapa) -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="/scripts/mapa.js" defer></script>
+</body>
+</html>
