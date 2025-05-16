@@ -1,10 +1,10 @@
-// app.js
 require('dotenv').config();
 const connectDB = require('./db'); // Importa la función para conectar a la DB
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const cors = require('cors');
 const Usuario = require('./usuario');
 const Punto = require('./punto');
 
@@ -12,10 +12,22 @@ const app = express();
 
 // --- Middleware ---
 app.use(express.json());
+
+// --- Habilitar CORS para permitir peticiones desde el frontend (ajusta el origin si quieres) ---
+app.use(cors({
+  origin: 'https://larutadelreciclador.netlify.app', // Cambia a '*' para permitir todos (solo desarrollo)
+  credentials: true
+}));
+
 app.use(session({
   secret: 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: {
+    secure: false, // Cambia a true si usas HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000
+  }
 }));
 
 // --- Conexión a MongoDB ---
@@ -190,4 +202,3 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
-
