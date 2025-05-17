@@ -1,43 +1,49 @@
-document.getElementById('formLogin').addEventListener('submit', async (e) => {
-  e.preventDefault(); // Evitar que el formulario se envíe de manera predeterminada
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const formLogin = document.getElementById('formLogin');
+  const mensajeError = document.getElementById('mensajeErrorLogin');
 
-  // Obtener el nombre de usuario del campo de texto
-  const nombre = document.getElementById('nombreLogin').value.trim();
+  const isLocal = window.location.hostname.includes('localhost');
+  const API_URL = isLocal
+    ? 'http://localhost:3000/api'
+    : 'https://resourceful-enchantment-production.up.railway.app/api';
 
-  // Verificar que el nombre no esté vacío
-  if (!nombre) {
-    document.getElementById('mensajeErrorLogin').textContent = 'Por favor ingresa un nombre de usuario';
-    return;
-  }
+  formLogin.addEventListener('submit', async (e) => {
+    e.preventDefault(); // Evita envío por defecto
 
-  try {
-    // Hacer la solicitud POST a la API de inicio de sesión
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ nombre }),
-    });
+    const nombre = document.getElementById('nombreLogin').value.trim();
 
-    const data = await response.json();
-
-    if (response.ok) {
-      // Guardar el nombre de usuario y el usuarioId en localStorage
-      localStorage.setItem('usuario', data.usuario.nombre);  // Guardamos el nombre
-      localStorage.setItem('usuarioId', data.usuario._id);   // Guardamos el usuarioId
-
-      // Si el inicio de sesión fue exitoso
-      alert('Inicio de sesión exitoso');
-
-      // Redirigir al perfil
-      window.location.href = '/perfil';
-    } else {
-      // Si hubo un error (usuario no encontrado)
-      document.getElementById('mensajeErrorLogin').textContent = data.error || 'Error desconocido';
+    if (!nombre) {
+      mensajeError.textContent = 'Por favor ingresa un nombre de usuario';
+      return;
     }
-  } catch (error) {
-    console.error('Error al intentar iniciar sesión:', error);
-    document.getElementById('mensajeErrorLogin').textContent = 'Hubo un error, por favor intenta nuevamente';
-  }
+
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ nombre }),
+        credentials: 'include', // Para incluir cookies de sesión
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Guardamos datos del usuario en localStorage
+        localStorage.setItem('usuario', data.usuario.nombre);
+        localStorage.setItem('usuarioId', data.usuario._id);
+
+        alert('Inicio de sesión exitoso');
+        window.location.href = '/perfil';
+      } else {
+        mensajeError.textContent = data.error || 'Usuario no encontrado';
+      }
+    } catch (error) {
+      console.error('Error al intentar iniciar sesión:', error);
+      mensajeError.textContent = 'Error de conexión. Intenta nuevamente.';
+    }
+  });
 });
+</script>
