@@ -1,26 +1,35 @@
-// --- app.js ---
 require('dotenv').config();
 const connectDB = require('./db');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const cors = require('cors');
 const Usuario = require('./usuario');
 const Punto = require('./punto');
-const cors = require('cors');
 
 const app = express();
 
-// --- Middleware ---
-app.use(cors({
+// --- CORS configurado para Netlify y preflight OPTIONS ---
+const corsOptions = {
   origin: 'https://larutadelreciclador.netlify.app',
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// --- Middleware ---
 app.use(express.json());
 app.use(session({
-  secret: 'mi_clave_secreta',
+  secret: process.env.SESSION_SECRET || 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: {
+    secure: true,      // en producción con HTTPS
+    sameSite: 'none'   // permite cookies entre dominios
+  }
 }));
 
 // --- Conexión a MongoDB ---
@@ -69,7 +78,7 @@ app.post('/api/registrar-usuario', async (req, res) => {
     }
     const u = new Usuario({ nombre: nombreNorm, puntos: 0 });
     await u.save();
-    res.status(201).json({ mensaje: 'Usuario registrado con éxito' });
+    res.status(201).json({ mensaje: 'Usuario registrado con éxito', usuario: u });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Error al registrar usuario' });
@@ -144,7 +153,7 @@ app.post('/api/ubicaciones', async (req, res) => {
     res.json({ mensaje: 'Ubicación guardada con éxito', punto: nuevo });
   } catch (e) {
     console.error('Error al guardar ubicación:', e);
-    res.status(500).json({ error: 'Hubo un error al guardar la ubicación' });
+    res.status(500).json({ error: 'Error al guardar ubicación' });
   }
 });
 
