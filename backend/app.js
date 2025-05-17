@@ -1,31 +1,26 @@
+// --- app.js ---
 require('dotenv').config();
-const connectDB = require('./db'); // Función para conectar a la DB
+const connectDB = require('./db');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
-const cors = require('cors'); // Importar cors
 const Usuario = require('./usuario');
 const Punto = require('./punto');
+const cors = require('cors');
 
 const app = express();
 
 // --- Middleware ---
-// Habilitar CORS para frontend https://larutadelreciclador.netlify.app
 app.use(cors({
   origin: 'https://larutadelreciclador.netlify.app',
   credentials: true
 }));
-
 app.use(express.json());
 app.use(session({
   secret: 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: true,
-  cookie: {
-    sameSite: 'none', // para que funcione en sitios cruzados (netlify -> backend)
-    secure: true      // requiere HTTPS en producción, si pruebas local cambia a false
-  }
+  saveUninitialized: true
 }));
 
 // --- Conexión a MongoDB ---
@@ -38,7 +33,6 @@ connectDB()
 
 // --- Archivos estáticos ---
 const frontendPath = path.join(__dirname, '..', 'frontend');
-
 app.use('/styles', express.static(path.join(frontendPath, 'styles')));
 app.use('/scripts', express.static(path.join(frontendPath, 'scripts')));
 app.use('/images', express.static(path.join(frontendPath, 'images')));
@@ -46,16 +40,13 @@ app.use('/model', express.static(path.join(frontendPath, 'model')));
 
 // --- Rutas HTML y redirecciones ---
 const pagesPath = path.join(frontendPath, 'pages');
-const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
-
+const páginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
 páginas.forEach(p => {
-  app.get(`/${p}`, (req, res) =>
-    res.sendFile(path.join(pagesPath, `${p}.html`))
-  );
+  app.get(`/${p}`, (req, res) => res.sendFile(path.join(pagesPath, `${p}.html`)));
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
 });
 
-// --- RUTA DINÁMICA para /rutas: inyectar window.USUARIO ---
+// --- RUTA DINÁMICA para /rutas ---
 app.get('/rutas', (req, res) => {
   const filePath = path.join(pagesPath, 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
@@ -66,7 +57,6 @@ app.get('/rutas', (req, res) => {
     res.send(result);
   });
 });
-app.get('/rutas.html', (req, res) => res.redirect('/rutas'));
 
 // --- API: Registrar usuario ---
 app.post('/api/registrar-usuario', async (req, res) => {
@@ -96,10 +86,7 @@ app.post('/api/login', async (req, res) => {
     if (!u) return res.status(404).json({ error: 'Usuario no registrado' });
     req.session.nombre = nombreNorm;
     req.session.usuarioId = u._id;
-    res.json({
-      mensaje: 'Login exitoso',
-      usuario: { nombre: u.nombre, _id: u._id }
-    });
+    res.json({ mensaje: 'Login exitoso', usuario: { nombre: u.nombre, _id: u._id } });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Error al iniciar sesión' });
@@ -108,9 +95,7 @@ app.post('/api/login', async (req, res) => {
 
 // --- API: Usuario logueado ---
 app.get('/api/usuario-logueado', (req, res) => {
-  if (!req.session.nombre) {
-    return res.status(401).json({ error: 'No hay sesión activa' });
-  }
+  if (!req.session.nombre) return res.status(401).json({ error: 'No hay sesión activa' });
   res.json({ nombre: req.session.nombre, usuarioId: req.session.usuarioId });
 });
 
@@ -154,12 +139,7 @@ app.post('/api/ubicaciones', async (req, res) => {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
   try {
-    const nuevo = new Punto({
-      lat: latitud,
-      lng: longitud,
-      nombre: 'Punto de reciclaje',
-      usuario: usuarioId
-    });
+    const nuevo = new Punto({ lat: latitud, lng: longitud, nombre: 'Punto de reciclaje', usuario: usuarioId });
     await nuevo.save();
     res.json({ mensaje: 'Ubicación guardada con éxito', punto: nuevo });
   } catch (e) {
