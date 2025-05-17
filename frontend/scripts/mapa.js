@@ -1,9 +1,3 @@
-
-// Definir URL base dependiendo del entorno
-const API_URL = window.location.hostname.includes('localhost')
-  ? 'http://localhost:3000'
-  : 'https://larutadelreciclador.netlify.app';
-
 // Obtener nombre de usuario desde la URL y guardarlo en localStorage
 const params = new URLSearchParams(window.location.search);
 const nombreDesdeUrl = params.get('nombre');
@@ -39,7 +33,7 @@ function crearMarcador(lat, lng) {
 
   // Guardar ubicación usando la API visible
   if (usuarioId) {
-    guardarUbicacion(usuarioId, lat, lng, 1); 
+    guardarUbicacion(usuarioId, lat, lng, 1);
   } else {
     console.error('No se encontró el usuarioId en localStorage');
   }
@@ -65,7 +59,7 @@ function guardarUbicacion(usuarioId, latitud, longitud, puntos) {
   const data = { usuarioId, latitud, longitud, puntos };
   console.log('POST /api/ubicaciones', data);
 
-  fetch(`${API_URL}/api/ubicaciones`, {
+  fetch(`${window.API_URL}/ubicaciones`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -82,7 +76,7 @@ function eliminarUbicacion(lat, lng) {
   const data = { lat, lng };
   console.log('DELETE /api/eliminar-punto', data);
 
-  fetch(`${API_URL}/api/eliminar-punto`, {
+  fetch(`${window.API_URL}/eliminar-punto`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -92,9 +86,9 @@ function eliminarUbicacion(lat, lng) {
   .catch(error => console.error('Error al eliminar ubicación:', error));
 }
 
-// Cargar puntos desde la API (corregido)
+// Cargar puntos desde la API
 function cargarPuntosDeReciclaje() {
-  fetch(`${API_URL}/api/ubicaciones`, {
+  fetch(`${window.API_URL}/puntos`, {
     method: 'GET',
     credentials: 'include'
   })
@@ -102,8 +96,9 @@ function cargarPuntosDeReciclaje() {
   .then(data => {
     console.log('Puntos cargados:', data);
     data.forEach(punto => {
-      L.marker([punto.latitud, punto.longitud]).addTo(map)
-        .bindPopup(`Punto de Reciclaje: ${punto.nombre || 'Anónimo'}`);
+      L.marker([punto.lat, punto.lng]).addTo(map)
+        .bindPopup(`Punto de Reciclaje: ${punto.nombre}`)
+        .openPopup();
     });
   })
   .catch(err => console.error('Error al cargar puntos:', err));
@@ -114,7 +109,7 @@ async function sumarPunto(nombre) {
   console.log('POST /sumar-punto', { nombre });
 
   try {
-    const response = await fetch(`${API_URL}/sumar-punto`, {
+    const response = await fetch(`${window.API_URL.replace('/api', '')}/sumar-punto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre })
