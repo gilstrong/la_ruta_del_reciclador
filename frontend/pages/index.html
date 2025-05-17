@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>La Ruta del Reciclador</title>
-    <link rel="stylesheet" href="/styles/main.css">
-
+    <link rel="stylesheet" href="/styles/main.css" />
 </head>
 <body>
     <!-- Hero Background fijo que cubre toda la página -->
     <div class="hero-background"></div>
-    
 
     <!-- Cabecera -->
     <header>
@@ -43,38 +41,48 @@
     <!-- seccion de introduccion -->
     <section class="intro">
         <div class="intro-card">
-            <img id="mi-logo" src="/images/logo.png" alt="Logo de reciclaje">
+            <img id="mi-logo" src="/images/logo.png" alt="Logo de reciclaje" />
             <h1>Bienvenidos a "La Ruta del Reciclador"</h1>
-            <p>Somos una plataforma comprometida con el medio ambiente, que conecta a los vecinos de Villa Juana con los recolectores de reciclaje. Nuestro objetivo es facilitar la recolección de materiales reciclables de manera eficiente y sostenible.</p>
+            <p>
+                Somos una plataforma comprometida con el medio ambiente, que conecta a los vecinos
+                de Villa Juana con los recolectores de reciclaje. Nuestro objetivo es facilitar la
+                recolección de materiales reciclables de manera eficiente y sostenible.
+            </p>
         </div>
         <div class="intro-card">
-            <img src="/images/recolector.png" alt="todavia" class="intro-image">
+            <img src="/images/recolector.png" alt="todavia" class="intro-image" />
             <h2>¿Qué hacemos?</h2>
-            <p>Ayudamos a que todos los materiales reciclables sean recolectados correctamente. Marcamos los puntos de recolección y optimizamos las rutas para los recolectores.</p>
+            <p>
+                Ayudamos a que todos los materiales reciclables sean recolectados correctamente.
+                Marcamos los puntos de recolección y optimizamos las rutas para los recolectores.
+            </p>
         </div>
         <div class="intro-card">
-            <img src="/images/unete.jpg" alt="Reciclaje" class="intro-image">
+            <img src="/images/unete.jpg" alt="Reciclaje" class="intro-image" />
             <h2>¡Únete!</h2>
-            <p>Con tu ayuda podemos mejorar la limpieza de Villa Juana y proteger el medio ambiente. Tu contribución cuenta para hacer del reciclaje algo más eficiente.</p>
+            <p>
+                Con tu ayuda podemos mejorar la limpieza de Villa Juana y proteger el medio ambiente.
+                Tu contribución cuenta para hacer del reciclaje algo más eficiente.
+            </p>
         </div>
     </section>
 
-    <!-- Sección de Caracterissticas -->
+    <!-- Sección de Características -->
     <section class="features">
         <div class="feature-card">
-            <img src="/images/ubicacion1.jpg" alt="Registrar Ubicación" class="feature-image">
+            <img src="/images/ubicacion1.jpg" alt="Registrar Ubicación" class="feature-image" />
             <h3>Registrar Ubicación</h3>
             <p>Marca el punto de reciclaje más cercano para que los recolectores puedan recoger tus materiales.</p>
             <a href="mapa.html">Ver más</a>
         </div>
         <div class="feature-card">
-            <img src="/images/botellas1.jpg" alt="Clasificación de Residuos" class="feature-image">
+            <img src="/images/botellas1.jpg" alt="Clasificación de Residuos" class="feature-image" />
             <h3>Clasificación de Residuos</h3>
             <p>Con la ayuda de la inteligencia artificial, clasificamos tus residuos para que sean correctamente reciclados.</p>
             <a href="/residuos">Ver más</a>
         </div>
         <div class="feature-card">
-            <img src="/images/rutas1.jpg" alt="Imagen Residuo" class="feature-image"/>
+            <img src="/images/rutas1.jpg" alt="Imagen Residuo" class="feature-image" />
             <h3>Rutas Optimizada</h3>
             <p>Los recolectores reciben rutas optimizadas para asegurar la recolección eficiente de los materiales.</p>
             <a href="/rutas">Ver más</a>
@@ -85,5 +93,15 @@
     <footer>
         <p>&copy; 2025 La Ruta del Reciclador. Todos los derechos reservados.</p>
     </footer>
+
+    <!-- Variable global para la URL del backend -->
+    <script>
+      // Cambia aquí la URL según el entorno:
+      window.API_URL = 'http://localhost:3000/api'; // Local
+      // window.API_URL = 'https://tu-backend-en-produccion.com/api'; // Producción
+    </script>
+
+    <!-- Aquí iría el script principal del frontend -->
+    <script src="/scripts/mapa.js"></script>
 </body>
 </html>
