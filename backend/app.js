@@ -12,7 +12,7 @@ const app = express();
 
 // --- CORS configurado para Netlify y preflight OPTIONS ---
 const corsOptions = {
-  origin: 'https://larutadelreciclador.netlify.app',
+  origin: process.env.FRONTEND_URL || 'https://larutadelreciclador.netlify.app',
   credentials: true,
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
@@ -25,16 +25,16 @@ app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: {
-    secure: true,      // en producción con HTTPS
-    sameSite: 'none'   // permite cookies entre dominios
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'none'
   }
 }));
 
 // --- Conexión a MongoDB ---
-connectDB()
-  .then(() => console.log('✅ Conectado a MongoDB'))
+connectDB(process.env.MONGO_URI)
+  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
   .catch(err => {
     console.error('❌ Error conectando a MongoDB:', err);
     process.exit(1);
@@ -49,8 +49,8 @@ app.use('/model', express.static(path.join(frontendPath, 'model')));
 
 // --- Rutas HTML y redirecciones ---
 const pagesPath = path.join(frontendPath, 'pages');
-const páginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
-páginas.forEach(p => {
+const paginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
+paginas.forEach(p => {
   app.get(`/${p}`, (req, res) => res.sendFile(path.join(pagesPath, `${p}.html`)));
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
 });
@@ -78,9 +78,9 @@ app.post('/api/registrar-usuario', async (req, res) => {
     }
     const u = new Usuario({ nombre: nombreNorm, puntos: 0 });
     await u.save();
-    res.status(201).json({ mensaje: 'Usuario registrado con éxito', usuario: u });
+    res.status(201).json({ mensaje: 'Usuario registrado con éxito', usuario: { _id: u._id, nombre: u.nombre, puntos: u.puntos } });
   } catch (e) {
-    console.error(e);
+    console.error('Error al registrar usuario:', e);
     res.status(500).json({ error: 'Error al registrar usuario' });
   }
 });
@@ -95,9 +95,9 @@ app.post('/api/login', async (req, res) => {
     if (!u) return res.status(404).json({ error: 'Usuario no registrado' });
     req.session.nombre = nombreNorm;
     req.session.usuarioId = u._id;
-    res.json({ mensaje: 'Login exitoso', usuario: { nombre: u.nombre, _id: u._id } });
+    res.json({ mensaje: 'Login exitoso', usuario: { _id: u._id, nombre: u.nombre, puntos: u.puntos } });
   } catch (e) {
-    console.error(e);
+    console.error('Error al iniciar sesión:', e);
     res.status(500).json({ error: 'Error al iniciar sesión' });
   }
 });
@@ -105,27 +105,29 @@ app.post('/api/login', async (req, res) => {
 // --- API: Usuario logueado ---
 app.get('/api/usuario-logueado', (req, res) => {
   if (!req.session.nombre) return res.status(401).json({ error: 'No hay sesión activa' });
-  res.json({ nombre: req.session.nombre, usuarioId: req.session.usuarioId });
+  res.json({ usuario: { _id: req.session.usuarioId, nombre: req.session.nombre } });
 });
 
 // --- API: Perfil del usuario ---
 app.get('/api/perfil/:nombre', async (req, res) => {
   const nombreNorm = req.params.nombre.toLowerCase();
+  console.log('Perfil solicitado para:', nombreNorm);
   try {
     let u = await Usuario.findOne({ nombre: nombreNorm });
     if (!u) {
       u = new Usuario({ nombre: nombreNorm, puntos: 0 });
       await u.save();
     }
+    console.log('Usuario encontrado en DB:', u);
     res.json({ nombre: u.nombre, puntos: u.puntos });
   } catch (e) {
-    console.error(e);
+    console.error('Error al obtener perfil:', e);
     res.status(500).json({ error: 'Error al obtener perfil' });
   }
 });
 
 // --- API: Sumar punto ---
-app.post('/sumar-punto', async (req, res) => {
+app.post('/api/sumar-punto', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
   try {
@@ -134,23 +136,23 @@ app.post('/sumar-punto', async (req, res) => {
     if (!u) u = new Usuario({ nombre: nombreNorm, puntos: 1 });
     else u.puntos += 1;
     await u.save();
-    res.json({ mensaje: 'Punto sumado con éxito', usuario: u });
+    res.json({ mensaje: 'Punto sumado con éxito', usuario: { _id: u._id, nombre: u.nombre, puntos: u.puntos } });
   } catch (e) {
-    console.error(e);
+    console.error('Error al sumar punto:', e);
     res.status(500).json({ error: 'Error al sumar punto' });
   }
 });
 
 // --- API: Guardar ubicaciones ---
 app.post('/api/ubicaciones', async (req, res) => {
-  const { usuarioId, latitud, longitud, puntos } = req.body;
-  if (!usuarioId || latitud == null || longitud == null || puntos == null) {
+  const { usuarioId, latitud, longitud } = req.body;
+  if (!usuarioId || latitud == null || longitud == null) {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
   try {
     const nuevo = new Punto({ lat: latitud, lng: longitud, nombre: 'Punto de reciclaje', usuario: usuarioId });
     await nuevo.save();
-    res.json({ mensaje: 'Ubicación guardada con éxito', punto: nuevo });
+    res.json({ mensaje: 'Ubicación guardada con éxito', punto: { _id: nuevo._id, lat: nuevo.lat, lng: nuevo.lng } });
   } catch (e) {
     console.error('Error al guardar ubicación:', e);
     res.status(500).json({ error: 'Error al guardar ubicación' });
@@ -166,7 +168,7 @@ app.delete('/api/eliminar-punto', async (req, res) => {
   try {
     const eliminado = await Punto.findOneAndDelete({ lat, lng });
     if (!eliminado) return res.status(404).json({ error: 'Punto no encontrado' });
-    res.json({ mensaje: 'Punto eliminado con éxito', punto: eliminado });
+    res.json({ mensaje: 'Punto eliminado con éxito', punto: { _id: eliminado._id, lat: eliminado.lat, lng: eliminado.lng } });
   } catch (e) {
     console.error('Error al eliminar punto:', e);
     res.status(500).json({ error: 'Error al eliminar punto' });
@@ -177,7 +179,7 @@ app.delete('/api/eliminar-punto', async (req, res) => {
 app.get('/api/ubicaciones', async (req, res) => {
   try {
     const ubicaciones = await Punto.find().populate('usuario', 'nombre');
-    res.json(ubicaciones);
+    res.json(ubicaciones.map(u => ({ _id: u._id, lat: u.lat, lng: u.lng, usuario: u.usuario.nombre }));
   } catch (e) {
     console.error('Error al obtener ubicaciones:', e);
     res.status(500).json({ error: 'Error al obtener ubicaciones' });
