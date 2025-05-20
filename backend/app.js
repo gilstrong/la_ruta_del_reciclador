@@ -144,18 +144,20 @@ app.post('/api/sumar-punto', async (req, res) => {
 });
 
 // --- API: Guardar ubicaciones ---
-app.post('/api/ubicaciones', async (req, res) => {
-  const { usuarioId, latitud, longitud } = req.body;
-  if (!usuarioId || latitud == null || longitud == null) {
-    return res.status(400).json({ error: 'Faltan parámetros' });
-  }
+app.get('/api/ubicaciones', async (req, res) => {
   try {
-    const nuevo = new Punto({ lat: latitud, lng: longitud, nombre: 'Punto de reciclaje', usuario: usuarioId });
-    await nuevo.save();
-    res.json({ mensaje: 'Ubicación guardada con éxito', punto: { _id: nuevo._id, lat: nuevo.lat, lng: nuevo.lng } });
+    const ubicaciones = await Punto.find().populate('usuario', 'nombre');
+    res.json(
+      ubicaciones.map(u => ({
+        _id: u._id,
+        lat: u.lat,
+        lng: u.lng,
+        usuario: u.usuario.nombre
+      }))
+    );
   } catch (e) {
-    console.error('Error al guardar ubicación:', e);
-    res.status(500).json({ error: 'Error al guardar ubicación' });
+    console.error('Error al obtener ubicaciones:', e);
+    res.status(500).json({ error: 'Error al obtener ubicaciones' });
   }
 });
 
