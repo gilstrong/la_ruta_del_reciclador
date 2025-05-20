@@ -33,7 +33,7 @@ app.use(session({
 }));
 
 // --- Conexión a MongoDB ---
-connectDB()
+connectDB(process.env.MONGO_URI)
   .then(() => console.log('✅ Conectado a MongoDB Atlas'))
   .catch(err => {
     console.error('❌ Error conectando a MongoDB:', err);
@@ -111,12 +111,14 @@ app.get('/api/usuario-logueado', (req, res) => {
 // --- API: Perfil del usuario ---
 app.get('/api/perfil/:nombre', async (req, res) => {
   const nombreNorm = req.params.nombre.toLowerCase();
+  console.log('Perfil solicitado para:', nombreNorm);
   try {
     let u = await Usuario.findOne({ nombre: nombreNorm });
     if (!u) {
       u = new Usuario({ nombre: nombreNorm, puntos: 0 });
       await u.save();
     }
+    console.log('Usuario encontrado en DB:', u);
     res.json({ nombre: u.nombre, puntos: u.puntos });
   } catch (e) {
     console.error('Error al obtener perfil:', e);
