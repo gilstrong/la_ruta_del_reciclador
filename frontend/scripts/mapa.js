@@ -59,7 +59,7 @@ function guardarUbicacion(usuarioId, latitud, longitud, puntos) {
   const data = { usuarioId, latitud, longitud, puntos };
   console.log('POST /api/ubicaciones', data);
 
-  fetch(`${window.API_URL}/ubicaciones`, {
+  fetch(${window.API_URL}/ubicaciones, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -76,7 +76,7 @@ function eliminarUbicacion(lat, lng) {
   const data = { lat, lng };
   console.log('DELETE /api/eliminar-punto', data);
 
-  fetch(`${window.API_URL}/eliminar-punto`, {
+  fetch(${window.API_URL}/eliminar-punto, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -88,7 +88,7 @@ function eliminarUbicacion(lat, lng) {
 
 // Cargar puntos desde la API
 function cargarPuntosDeReciclaje() {
-  fetch(`${window.API_URL}/puntos`, {
+  fetch(${window.API_URL}/puntos, {
     method: 'GET',
     credentials: 'include'
   })
@@ -97,7 +97,7 @@ function cargarPuntosDeReciclaje() {
     console.log('Puntos cargados:', data);
     data.forEach(punto => {
       L.marker([punto.lat, punto.lng]).addTo(map)
-        .bindPopup(`Punto de Reciclaje: ${punto.nombre}`)
+        .bindPopup(Punto de Reciclaje: ${punto.nombre})
         .openPopup();
     });
   })
@@ -109,7 +109,7 @@ async function sumarPunto(nombre) {
   console.log('POST /sumar-punto', { nombre });
 
   try {
-    const response = await fetch(`${window.API_URL.replace('/api', '')}/sumar-punto`, {
+    const response = await fetch(${window.API_URL.replace('/api', '')}/sumar-punto, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre })
@@ -119,7 +119,7 @@ async function sumarPunto(nombre) {
 
     if (response.ok) {
       console.log('Punto sumado:', data);
-      alert(`¡Punto sumado! Ahora tienes ${data.usuario.puntos} puntos.`);
+      alert(¡Punto sumado! Ahora tienes ${data.usuario.puntos} puntos.);
     } else {
       console.error('Error al sumar punto:', data.error);
     }
@@ -214,4 +214,4 @@ function mostrarRutaEnMapa(mapa, ruta) {
   const latlngs = ruta.map(p => [p.lat, p.lng]);
   L.polyline(latlngs, { color: 'blue' }).addTo(mapa);
   mapa.fitBounds(latlngs);
-}
+} 
