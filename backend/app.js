@@ -159,6 +159,7 @@ app.get('/api/ubicaciones', async (req, res) => {
   }
 });
 
+
 // --- API: Eliminar ubicación ---
 app.delete('/api/eliminar-punto', async (req, res) => {
   const { lat, lng } = req.body;
