@@ -143,18 +143,16 @@ app.post('/api/sumar-punto', async (req, res) => {
   }
 });
 
-// --- API: Guardar ubicaciones ---
+// --- API: Obtener ubicaciones ---
 app.get('/api/ubicaciones', async (req, res) => {
   try {
     const ubicaciones = await Punto.find().populate('usuario', 'nombre');
-    res.json(
-      ubicaciones.map(u => ({
-        _id: u._id,
-        lat: u.lat,
-        lng: u.lng,
-        usuario: u.usuario.nombre
-      }))
-    );
+    res.json(ubicaciones.map(u => ({
+      _id: u._id,
+      lat: u.lat,
+      lng: u.lng,
+      usuario: u.usuario.nombre
+    })));
   } catch (e) {
     console.error('Error al obtener ubicaciones:', e);
     res.status(500).json({ error: 'Error al obtener ubicaciones' });
@@ -177,19 +175,8 @@ app.delete('/api/eliminar-punto', async (req, res) => {
   }
 });
 
-// --- API: Obtener todas las ubicaciones ---
-app.get('/api/ubicaciones', async (req, res) => {
-  try {
-    const ubicaciones = await Punto.find().populate('usuario', 'nombre');
-    res.json(ubicaciones.map(u => ({ _id: u._id, lat: u.lat, lng: u.lng, usuario: u.usuario.nombre }));
-  } catch (e) {
-    console.error('Error al obtener ubicaciones:', e);
-    res.status(500).json({ error: 'Error al obtener ubicaciones' });
-  }
-});
-
 // --- Iniciar servidor ---
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`Servidor corriendo en http://localhost:${port}`);
+  console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
 });
