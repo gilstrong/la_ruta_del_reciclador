@@ -27,13 +27,31 @@ const apiLimiter = rateLimit({
   message: 'Demasiadas solicitudes desde esta IP, por favor intente más tarde'
 });
 
-// --- Middleware de Seguridad ---
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://larutadelreciclador.netlify.app',
+// --- Configuración CORS Mejorada ---
+const corsOptions = {
+  origin: [
+    'https://larutadelreciclador.netlify.app',
+    'http://localhost:3000',
+    'https://larutadelreciclador.netlify.app' // Asegurar que esté presente
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Powered-By'],
+  maxAge: 600, // Tiempo de caché para preflight requests
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Habilitar preflight para todas las rutas
+
+// --- Middleware de Seguridad ---
+app.use(helmet());
+app.use(helmet.hsts({
+  maxAge: 63072000, // 2 años en segundos
+  includeSubDomains: true,
+  preload: true
 }));
 
 // Logger de solicitudes
@@ -58,19 +76,24 @@ app.use(session({
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000,
+    domain: isProduction ? '.railway.app' : undefined
   }
 }));
 
 // --- Conexión a MongoDB Mejorada ---
-mongoose.connect(process.env.MONGO_URI, {
+const mongoOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000,
   maxPoolSize: 50,
   socketTimeoutMS: 45000,
-  connectTimeoutMS: 30000
-})
+  connectTimeoutMS: 30000,
+  retryWrites: true,
+  w: 'majority'
+};
+
+mongoose.connect(process.env.MONGO_URI, mongoOptions)
 .then(() => console.log('✅ Conectado a MongoDB Atlas'))
 .catch(err => {
   console.error('❌ Error conectando a MongoDB:', err);
@@ -139,6 +162,7 @@ app.post('/api/registrar-usuario', async (req, res) => {
     // Validación mejorada
     if (!nombre || typeof nombre !== 'string' || nombre.trim().length < 3) {
       return res.status(400).json({ 
+        success: false,
         error: 'Nombre inválido. Debe tener al menos 3 caracteres' 
       });
     }
@@ -147,7 +171,10 @@ app.post('/api/registrar-usuario', async (req, res) => {
     const usuarioExistente = await Usuario.findOne({ nombre: nombreNorm });
     
     if (usuarioExistente) {
-      return res.status(409).json({ error: 'El usuario ya existe' });
+      return res.status(409).json({ 
+        success: false,
+        error: 'El usuario ya existe' 
+      });
     }
 
     const nuevoUsuario = new Usuario({ 
@@ -156,9 +183,17 @@ app.post('/api/registrar-usuario', async (req, res) => {
     });
     await nuevoUsuario.save();
 
-    // Iniciar sesión automáticamente
+    // Configurar sesión
     req.session.nombre = nombreNorm;
     req.session.usuarioId = nuevoUsuario._id;
+
+    // Configurar cookie de sesión
+    res.cookie('sessionId', req.sessionID, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 1 día
+    });
 
     res.status(201).json({ 
       success: true,
@@ -167,7 +202,8 @@ app.post('/api/registrar-usuario', async (req, res) => {
         _id: nuevoUsuario._id, 
         nombre: nuevoUsuario.nombre, 
         puntos: nuevoUsuario.puntos 
-      } 
+      },
+      sessionId: req.sessionID
     });
   } catch (error) {
     console.error('Error al registrar usuario:', error);
@@ -178,7 +214,14 @@ app.post('/api/registrar-usuario', async (req, res) => {
   }
 });
 
-// [Resto de tus rutas API permanecen igual pero con mejor manejo de errores...]
+// Ruta de prueba CORS
+app.get('/api/test-cors', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Prueba CORS exitosa',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // --- Manejo de errores centralizado ---
 app.use((err, req, res, next) => {
@@ -188,7 +231,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     error: 'Error interno del servidor',
-    message: isProduction ? undefined : err.message
+    message: isProduction ? undefined : err.message,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -202,11 +246,12 @@ const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
   console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Orígenes CORS permitidos: ${corsOptions.origin.join(', ')}`);
 });
 
 // Manejo de cierre graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Recibido SIGTERM. Cerrando servidor...');
+const shutdown = (signal) => {
+  console.log(`Recibido ${signal}. Cerrando servidor...`);
   server.close(() => {
     console.log('Servidor cerrado');
     mongoose.connection.close(false, () => {
@@ -214,15 +259,7 @@ process.on('SIGTERM', () => {
       process.exit(0);
     });
   });
-});
+};
 
-process.on('SIGINT', () => {
-  console.log('Recibido SIGINT. Cerrando servidor...');
-  server.close(() => {
-    console.log('Servidor cerrado');
-    mongoose.connection.close(false, () => {
-      console.log('Conexión a MongoDB cerrada');
-      process.exit(0);
-    });
-  });
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
