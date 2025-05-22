@@ -1,52 +1,24 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Registro</title>
-  <link rel="stylesheet" href="../styles/registro.css" />
-</head>
-<body>
-  <div class="registro-container">
-    <div class="registro-fondo"></div>
+document.getElementById('formRegistro').addEventListener('submit', async function (e) {
+  e.preventDefault();
 
-    <div class="registro-form">
-      <h1>Regístrate</h1>
-      <form id="formRegistro">
-        <input type="text" id="nombre" placeholder="Ingresa tu nombre" required />
-        <button type="submit">Registrarme</button>
-        <p id="mensajeError" style="color: red;"></p>
-      </form>
-      <a href="/">Volver al inicio</a>
-    </div>
-  </div>
+  const nombre = document.getElementById('nombre').value.trim().toLowerCase();
 
-  <script>
-    // código javaScript que envia el formulario de registro al backend
-    document.getElementById('formRegistro').addEventListener('submit', async function (e) {
-      e.preventDefault();  // Evita que el formulario se envíe de manera tradicional
+  try {
+    const respuesta = await fetch('https://resourceful-enchantment-production.up.railway.app/api/registrar-usuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }), // ← Coma importante aquí
+    }); // ← Este paréntesis cierra el fetch()
 
-const respuesta = await fetch('https://resourceful-enchantment-production.up.railway.app/api/registrar-usuario', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ nombre }),
-});
+    const data = await respuesta.json();
 
-        const data = await respuesta.json();
-
-        if (respuesta.ok) {
-          // Si el registro es exitoso, redirigir al mapa con el nombre del usuario
-          window.location.href = `/mapa?nombre=${encodeURIComponent(nombre)}`;
-        } else {
-          // Mostrar mensaje de error si no se pudo registrar
-          document.getElementById('mensajeError').textContent = data.error || 'Error al registrar.';
-        }
-      } catch (error) {
-        // Si hay un error de conexión, mostrar mensaje de error
-        document.getElementById('mensajeError').textContent = 'Error de conexión con el servidor.';
-        console.error('Error al registrar:', error);
-      }
-    });
-  </script>
-</body>
-</html>
+    if (respuesta.ok) {
+      window.location.href = `/mapa?nombre=${encodeURIComponent(nombre)}`; // ← Paréntesis corregido
+    } else {
+      document.getElementById('mensajeError').textContent = data.error || 'Error al registrar.';
+    }
+  } catch (error) {
+    document.getElementById('mensajeError').textContent = 'Error de conexión con el servidor.';
+    console.error('Error al registrar:', error);
+  }
+}); // ← Este cierra el addEventListener
