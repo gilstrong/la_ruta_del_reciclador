@@ -26,14 +26,11 @@
     document.getElementById('formRegistro').addEventListener('submit', async function (e) {
       e.preventDefault();  // Evita que el formulario se envíe de manera tradicional
 
-      const nombre = document.getElementById('nombre').value.trim().toLowerCase(); //   nombre en minúsculas
-
-      try {
-        const respuesta = await fetch('/api/registrar-usuario', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre }), // enviar el nombre al backend
-        });
+const respuesta = await fetch('https://resourceful-enchantment-production.up.railway.app/api/registrar-usuario', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ nombre }),
+});
 
         const data = await respuesta.json();
 
