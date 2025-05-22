@@ -131,9 +131,19 @@ app.use('/model', express.static(path.join(frontendPath, 'model'), staticOptions
 // --- Rutas HTML ---
 const paginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
 paginas.forEach(p => {
-  app.get(`/${p}`, (req, res) => res.sendFile(path.join(pagesPath, `${p}.html`)));
-  app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
+  // Asegúrate que 'p' no contenga caracteres especiales
+  const safePath = p.replace(/[^a-zA-Z0-9-]/g, '');
+  app.get(`/${safePath}`, (req, res) => {
+    try {
+      res.sendFile(path.join(pagesPath, `${safePath}.html`));
+    } catch (err) {
+      console.error(`Error serving ${safePath}.html:`, err);
+      res.status(404).send('Página no encontrada');
+    }
+  });
+  app.get(`/${safePath}.html`, (req, res) => res.redirect(`/${safePath}`));
 });
+
 
 // --- Ruta Dinámica para /rutas ---
 app.get('/rutas', (req, res) => {
