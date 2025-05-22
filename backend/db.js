@@ -1,22 +1,30 @@
-// --- db.js ---
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
     const uri = process.env.MONGO_URI;
+    
     if (!uri) {
-      throw new Error('La variable de entorno MONGO_URI no está definida.');
+      throw new Error('❌ La variable MONGO_URI no está definida. Verifica tu configuración en Railway.');
     }
 
-    await mongoose.connect(uri, {
+    const conn = await mongoose.connect(uri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // 5 segundos de espera
+      maxPoolSize: 10 // Conexiones máximas
     });
 
-    console.log('✅ Conexión a MongoDB establecida exitosamente.');
+    console.log(`✅ MongoDB Conectado: ${conn.connection.host}`.cyan.underline);
+    
+    // Manejo de eventos de conexión
+    mongoose.connection.on('error', (err) => {
+      console.error(`❌ Error de MongoDB: ${err.message}`.red.bold);
+    });
+
   } catch (error) {
-    console.error('❌ Error al conectar con MongoDB:', error.message);
-    process.exit(1); // Finaliza el proceso si la conexión falla
+    console.error(`❌ Error al conectar: ${error.message}`.red.bold);
+    process.exit(1);
   }
 };
 
