@@ -1,217 +1,355 @@
-// Obtener nombre de usuario desde la URL y guardarlo en localStorage
-const params = new URLSearchParams(window.location.search);
-const nombreDesdeUrl = params.get('nombre');
-if (nombreDesdeUrl) {
-  localStorage.setItem("usuario", nombreDesdeUrl);
+// Configuración inicial
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3000/api' 
+  : 'https://tu-backend-deploy.com/api';
+
+// Elementos del DOM
+const mapElement = document.getElementById('map');
+const pointsCounter = document.getElementById('points-counter');
+const userStatus = document.getElementById('user-status');
+const btnUbicacion = document.getElementById('btn-ubicacion');
+const btnBorrarTodo = document.getElementById('btn-borrar-todo');
+const btnRuta = document.getElementById('btn-ruta');
+
+// Variables de estado
+let currentMap = null;
+let currentMarkers = [];
+let currentUser = null;
+let userLocation = null;
+
+// Inicialización de la aplicación
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkUserSession();
+  initMap();
+  loadRecyclingPoints();
+  setupEventListeners();
+});
+
+// Verificar sesión de usuario
+async function checkUserSession() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/usuario-logueado`, {
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      currentUser = data.usuario;
+      updateUserStatus(currentUser.nombre);
+    } else {
+      showNotification('Debes iniciar sesión para marcar puntos', 'error');
+      redirectToLogin();
+    }
+  } catch (error) {
+    console.error('Error verificando sesión:', error);
+    showNotification('Error al verificar sesión', 'error');
+  }
 }
 
-// Recuperar nombre desde localStorage
-const nombreUsuario = localStorage.getItem("usuario");
-if (!nombreUsuario) {
-  alert("No se detectó un usuario válido. Por favor vuelve a iniciar sesión.");
+// Inicializar mapa Leaflet
+function initMap() {
+  currentMap = L.map(mapElement).setView([18.4861, -69.9312], 16);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(currentMap);
+  
+  // Evento para agregar marcadores al hacer clic
+  currentMap.on('click', async (e) => {
+    if (!currentUser) {
+      showNotification('Debes iniciar sesión para marcar puntos', 'error');
+      return;
+    }
+    
+    const { lat, lng } = e.latlng;
+    await addRecyclingPoint(lat, lng);
+  });
 }
 
-// Obtener usuarioId del localStorage (debe haberse guardado en el login)
-const usuarioId = localStorage.getItem("usuarioId");
-
-// Inicializar mapa en Villa Juana
-const map = L.map('map').setView([18.4861, -69.9312], 16);
-
-// Cargar capa base de OpenStreetMap
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors'
-}).addTo(map);
-
-// Lista de marcadores actuales en el mapa
-const marcadores = [];
-
-// Crear un nuevo marcador con funcionalidad de suma y eliminación
-function crearMarcador(lat, lng) {
-  const marcador = L.marker([lat, lng]).addTo(map)
-    .bindPopup('¡Aquí tengo material para reciclar!');
-  marcadores.push(marcador);
-
-  // Guardar ubicación usando la API visible
-  if (usuarioId) {
-    guardarUbicacion(usuarioId, lat, lng, 1);
-  } else {
-    console.error('No se encontró el usuarioId en localStorage');
+// Cargar puntos existentes desde la API
+async function loadRecyclingPoints() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ubicaciones`, {
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      const points = await response.json();
+      points.forEach(point => {
+        addMarkerToMap(point.lat, point.lng, point.usuario, false);
+      });
+    }
+  } catch (error) {
+    console.error('Error cargando puntos:', error);
+    showNotification('Error al cargar puntos de reciclaje', 'error');
   }
+}
 
-  if (nombreUsuario) {
-    sumarPunto(nombreUsuario);
+// Agregar un nuevo punto de reciclaje
+async function addRecyclingPoint(lat, lng) {
+  try {
+    // Guardar ubicación en la base de datos
+    const saveResponse = await fetch(`${API_BASE_URL}/puntos`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        usuarioId: currentUser._id,
+        latitud: lat,
+        longitud: lng
+      })
+    });
+    
+    if (!saveResponse.ok) {
+      throw new Error('Error al guardar ubicación');
+    }
+    
+    // Sumar punto al usuario
+    const pointsResponse = await fetch(`${API_BASE_URL}/sumar-punto`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        nombre: currentUser.nombre
+      })
+    });
+    
+    if (pointsResponse.ok) {
+      const data = await pointsResponse.json();
+      updateUserPoints(data.usuario.puntos);
+      addMarkerToMap(lat, lng, currentUser.nombre, true);
+      showNotification('¡Punto agregado y sumado a tu cuenta!');
+    } else {
+      throw new Error('Error al sumar punto');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error al agregar punto', 'error');
   }
+}
 
-  marcador.on('contextmenu', () => {
-    if (confirm('¿Seguro que quieres eliminar este punto de reciclaje?')) {
-      map.removeLayer(marcador);
-      const index = marcadores.indexOf(marcador);
-      if (index > -1) {
-        marcadores.splice(index, 1);
+// Agregar marcador al mapa
+function addMarkerToMap(lat, lng, userName, isNew = true) {
+  const marker = L.marker([lat, lng], {
+    icon: L.icon({
+      iconUrl: 'images/recycle-marker.png',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32]
+    })
+  }).addTo(currentMap);
+  
+  marker.bindPopup(`
+    <b>Punto de reciclaje</b>
+    <p>Usuario: ${userName}</p>
+    <small>${new Date().toLocaleString()}</small>
+  `);
+  
+  if (isNew) {
+    marker.openPopup();
+    currentMarkers.push(marker);
+  }
+  
+  // Eliminar marcador con clic derecho
+  marker.on('contextmenu', async () => {
+    if (confirm('¿Eliminar este punto de reciclaje?')) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/eliminar-punto`, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ lat, lng })
+        });
+        
+        if (response.ok) {
+          currentMap.removeLayer(marker);
+          currentMarkers = currentMarkers.filter(m => m !== marker);
+          showNotification('Punto eliminado correctamente');
+        } else {
+          throw new Error('Error al eliminar punto');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al eliminar punto', 'error');
       }
-      eliminarUbicacion(lat, lng);
     }
   });
 }
 
-// Guardar ubicación en el backend
-function guardarUbicacion(usuarioId, latitud, longitud, puntos) {
-  const data = { usuarioId, latitud, longitud, puntos };
-  console.log('POST /api/ubicaciones', data);
-
-  fetch(${window.API_URL}/ubicaciones, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => response.json())
-  .then(res => console.log('Respuesta de /api/ubicaciones:', res))
-  .catch(error => console.error('Error en /api/ubicaciones:', error));
-}
-
-// Eliminar ubicación del backend
-function eliminarUbicacion(lat, lng) {
-  const data = { lat, lng };
-  console.log('DELETE /api/eliminar-punto', data);
-
-  fetch(${window.API_URL}/eliminar-punto, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  })
-  .then(res => res.json())
-  .then(response => console.log('Respuesta de eliminación:', response))
-  .catch(error => console.error('Error al eliminar ubicación:', error));
-}
-
-// Cargar puntos desde la API
-function cargarPuntosDeReciclaje() {
-  fetch(${window.API_URL}/puntos, {
-    method: 'GET',
-    credentials: 'include'
-  })
-  .then(res => res.json())
-  .then(data => {
-    console.log('Puntos cargados:', data);
-    data.forEach(punto => {
-      L.marker([punto.lat, punto.lng]).addTo(map)
-        .bindPopup(Punto de Reciclaje: ${punto.nombre})
-        .openPopup();
-    });
-  })
-  .catch(err => console.error('Error al cargar puntos:', err));
-}
-
-// Sumar un punto al usuario
-async function sumarPunto(nombre) {
-  console.log('POST /sumar-punto', { nombre });
-
-  try {
-    const response = await fetch(${window.API_URL.replace('/api', '')}/sumar-punto, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre })
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      console.log('Punto sumado:', data);
-      alert(¡Punto sumado! Ahora tienes ${data.usuario.puntos} puntos.);
+// Configurar event listeners
+function setupEventListeners() {
+  // Botón de ubicación actual
+  btnUbicacion?.addEventListener('click', () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          currentMap.setView([userLocation.lat, userLocation.lng], 17);
+          showNotification('Ubicación actual establecida');
+        },
+        error => {
+          console.error('Error obteniendo ubicación:', error);
+          showNotification('No se pudo obtener tu ubicación', 'error');
+        }
+      );
     } else {
-      console.error('Error al sumar punto:', data.error);
+      showNotification('Tu navegador no soporta geolocalización', 'error');
     }
-  } catch (error) {
-    console.error('Error al sumar el punto:', error);
-  }
+  });
+  
+  // Botón para borrar todos los puntos
+  btnBorrarTodo?.addEventListener('click', async () => {
+    if (confirm('¿Eliminar TODOS tus puntos de reciclaje?')) {
+      try {
+        // Nota: Esto deberías implementarlo en tu backend
+        const response = await fetch(`${API_BASE_URL}/eliminar-puntos-usuario`, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ usuarioId: currentUser._id })
+        });
+        
+        if (response.ok) {
+          currentMarkers.forEach(marker => currentMap.removeLayer(marker));
+          currentMarkers = [];
+          showNotification('Todos tus puntos han sido eliminados');
+        } else {
+          throw new Error('Error al eliminar puntos');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error al eliminar puntos', 'error');
+      }
+    }
+  });
+  
+  // Botón para calcular ruta
+  btnRuta?.addEventListener('click', () => {
+    if (!userLocation) {
+      showNotification('Primero establece tu ubicación actual', 'error');
+      return;
+    }
+    
+    if (currentMarkers.length === 0) {
+      showNotification('No hay puntos de reciclaje para calcular ruta', 'error');
+      return;
+    }
+    
+    calculateOptimalRoute();
+  });
 }
 
-// Al cargar la página
-window.onload = cargarPuntosDeReciclaje;
-
-// Agregar punto al hacer clic en el mapa
-map.on('click', e => {
-  const { lat, lng } = e.latlng;
-  crearMarcador(lat, lng);
-});
-
-// Usar ubicación actual
-let ubicacionActual = null;
-document.getElementById('btnUbicacion').addEventListener('click', () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        ubicacionActual = { lat, lng };
-        crearMarcador(lat, lng);
-        map.setView([lat, lng], 17);
-      },
-      () => alert('No se pudo obtener tu ubicación.')
-    );
-  } else {
-    alert('Tu navegador no soporta geolocalización.');
-  }
-});
-
-// Eliminar todos los marcadores
-document.getElementById('btnBorrarTodo').addEventListener('click', () => {
-  if (confirm('¿Seguro que quieres eliminar TODOS los puntos de reciclaje?')) {
-    marcadores.forEach(marcador => {
-      const { lat, lng } = marcador.getLatLng();
-      eliminarUbicacion(lat, lng);
-      map.removeLayer(marcador);
-    });
-    marcadores.length = 0;
-  }
-});
-
-// Generar ruta optimizada
-document.getElementById('btnRuta').addEventListener('click', () => {
-  if (!ubicacionActual) {
-    alert('Debes activar tu ubicación actual primero.');
-    return;
-  }
-
-  const puntos = marcadores.map(m => m.getLatLng());
-
-  if (puntos.length === 0) {
-    alert('No hay puntos de reciclaje para generar una ruta.');
-    return;
-  }
-
-  const ruta = calcularRuta(puntos, ubicacionActual);
-  mostrarRutaEnMapa(map, ruta);
-});
-
-// Calcular distancia
-function calcularDistancia(a, b) {
-  const dx = a.lat - b.lat;
-  const dy = a.lng - b.lng;
-  return Math.sqrt(dx * dx + dy * dy);
+// Calcular ruta óptima
+function calculateOptimalRoute() {
+  const points = currentMarkers.map(marker => marker.getLatLng());
+  const route = findShortestRoute(userLocation, points);
+  drawRouteOnMap(route);
 }
 
-// Ruta ordenada por cercanía
-function calcularRuta(puntos, ubicacionInicial) {
-  const ruta = [];
-  const restantes = [...puntos];
-  let actual = ubicacionInicial;
-
-  while (restantes.length > 0) {
-    restantes.sort((a, b) => calcularDistancia(actual, a) - calcularDistancia(actual, b));
-    const siguiente = restantes.shift();
-    ruta.push(siguiente);
-    actual = siguiente;
+// Algoritmo para encontrar la ruta más corta (aproximación)
+function findShortestRoute(start, points) {
+  const remainingPoints = [...points];
+  const route = [];
+  let currentPoint = start;
+  
+  while (remainingPoints.length > 0) {
+    // Encontrar el punto más cercano
+    let closestIndex = 0;
+    let closestDistance = calculateDistance(currentPoint, remainingPoints[0]);
+    
+    for (let i = 1; i < remainingPoints.length; i++) {
+      const distance = calculateDistance(currentPoint, remainingPoints[i]);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = i;
+      }
+    }
+    
+    // Agregar a la ruta
+    route.push(remainingPoints[closestIndex]);
+    currentPoint = remainingPoints[closestIndex];
+    remainingPoints.splice(closestIndex, 1);
   }
+  
+  return route;
+}
 
-  return ruta;
+// Calcular distancia entre dos puntos (fórmula de Haversine)
+function calculateDistance(point1, point2) {
+  const R = 6371e3; // Radio de la Tierra en metros
+  const φ1 = point1.lat * Math.PI/180;
+  const φ2 = point2.lat * Math.PI/180;
+  const Δφ = (point2.lat - point1.lat) * Math.PI/180;
+  const Δλ = (point2.lng - point1.lng) * Math.PI/180;
+  
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  
+  return R * c;
 }
 
 // Dibujar ruta en el mapa
-function mostrarRutaEnMapa(mapa, ruta) {
-  const latlngs = ruta.map(p => [p.lat, p.lng]);
-  L.polyline(latlngs, { color: 'blue' }).addTo(mapa);
-  mapa.fitBounds(latlngs);
-} 
+function drawRouteOnMap(routePoints) {
+  // Limpiar ruta anterior si existe
+  if (window.currentRoute) {
+    currentMap.removeLayer(window.currentRoute);
+  }
+  
+  const routeLatLngs = [
+    [userLocation.lat, userLocation.lng],
+    ...routePoints.map(p => [p.lat, p.lng])
+  ];
+  
+  window.currentRoute = L.polyline(routeLatLngs, {
+    color: '#2ecc71',
+    weight: 5,
+    opacity: 0.7,
+    dashArray: '10, 10'
+  }).addTo(currentMap);
+  
+  currentMap.fitBounds(routeLatLngs);
+  showNotification('Ruta óptima calculada');
+}
+
+// Actualizar UI con información del usuario
+function updateUserStatus(userName) {
+  if (userStatus) {
+    userStatus.textContent = `Usuario: ${userName}`;
+  }
+}
+
+function updateUserPoints(points) {
+  if (pointsCounter) {
+    pointsCounter.textContent = `Puntos: ${points}`;
+  }
+}
+
+// Mostrar notificaciones
+function showNotification(message, type = 'success') {
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+
+// Redireccionar a login
+function redirectToLogin() {
+  window.location.href = '/login';
+}
