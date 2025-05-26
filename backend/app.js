@@ -129,20 +129,25 @@ app.use('/images', express.static(path.join(frontendPath, 'images'), staticOptio
 app.use('/model', express.static(path.join(frontendPath, 'model'), staticOptions));
 
 // --- Rutas HTML ---
-const paginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
 paginas.forEach(p => {
-  // Asegúrate que 'p' no contenga caracteres especiales
-  const safePath = p.replace(/[^a-zA-Z0-9-]/g, '');
+  const safePath = p.replace(/[^a-zA-Z0-9-]/g, '').trim();
+  if (!safePath) {
+    console.warn(`⚠️ Página ignorada por nombre inválido: "${p}"`);
+    return;
+  }
+
   app.get(`/${safePath}`, (req, res) => {
     try {
       res.sendFile(path.join(pagesPath, `${safePath}.html`));
     } catch (err) {
-      console.error(`Error serving ${safePath}.html:`, err);
+      console.error(`Error al servir ${safePath}.html:`, err);
       res.status(404).send('Página no encontrada');
     }
   });
+
   app.get(`/${safePath}.html`, (req, res) => res.redirect(`/${safePath}`));
 });
+
 
 
 // --- Ruta Dinámica para /rutas ---
