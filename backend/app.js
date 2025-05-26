@@ -129,24 +129,35 @@ app.use('/images', express.static(path.join(frontendPath, 'images'), staticOptio
 app.use('/model', express.static(path.join(frontendPath, 'model'), staticOptions));
 
 // --- Rutas HTML ---
+const paginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
+
 paginas.forEach(p => {
   const safePath = p.replace(/[^a-zA-Z0-9-]/g, '').trim();
-  if (!safePath) {
-    console.warn(`⚠️ Página ignorada por nombre inválido: "${p}"`);
+
+  // Validación de ruta segura
+  if (!safePath || safePath.includes(':')) {
+    console.warn(`❌ Ruta inválida ignorada: "${p}"`);
+    return;
+  }
+
+  const htmlFile = path.join(pagesPath, `${safePath}.html`);
+  if (!fs.existsSync(htmlFile)) {
+    console.warn(`⚠️ Archivo HTML no encontrado para ruta: /${safePath}`);
     return;
   }
 
   app.get(`/${safePath}`, (req, res) => {
     try {
-      res.sendFile(path.join(pagesPath, `${safePath}.html`));
+      res.sendFile(htmlFile);
     } catch (err) {
-      console.error(`Error al servir ${safePath}.html:`, err);
-      res.status(404).send('Página no encontrada');
+      console.error(`❌ Error sirviendo ${safePath}.html:`, err);
+      res.status(500).send('Error interno');
     }
   });
 
   app.get(`/${safePath}.html`, (req, res) => res.redirect(`/${safePath}`));
 });
+
 
 
 
