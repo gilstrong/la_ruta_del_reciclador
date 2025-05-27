@@ -1,45 +1,36 @@
-// --- app.js ---
 require('dotenv').config();
-const connectDB = require('./db');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const cors = require('cors');
+const connectDB = require('./db');
 const Usuario = require('./usuario');
 const Punto = require('./punto');
-const cors = require('cors');
 
 const app = express();
 
-// --- Configuración CORS ---
+// --- CORS Configurado correctamente ---
 const corsOptions = {
   origin: 'https://larutadelreciclador.netlify.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Habilita preflight
 
-// Responder explícitamente a OPTIONS (preflight)
-app.options('*', cors(corsOptions));
-
-// --- Middleware ---
+// --- Middlewares ---
 app.use(express.json());
-
 app.use(session({
   secret: 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: false, // Mejor evitar guardar sesión vacía
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS en prod
-    httpOnly: true,
-    sameSite: 'lax' // Ajusta si usas frontend en otro dominio
-  }
+  saveUninitialized: true
 }));
 
 // --- Conexión a MongoDB ---
-connectDB(process.env.MONGO_URI)
+connectDB()
   .then(() => console.log('✅ Conectado a MongoDB'))
   .catch(err => {
     console.error('❌ Error conectando a MongoDB:', err);
@@ -53,7 +44,7 @@ app.use('/scripts', express.static(path.join(frontendPath, 'scripts')));
 app.use('/images', express.static(path.join(frontendPath, 'images')));
 app.use('/model', express.static(path.join(frontendPath, 'model')));
 
-// --- Rutas HTML y redirecciones ---
+// --- Rutas HTML ---
 const pagesPath = path.join(frontendPath, 'pages');
 const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
 páginas.forEach(p => {
@@ -61,7 +52,7 @@ páginas.forEach(p => {
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
 });
 
-// --- RUTA DINÁMICA para /rutas ---
+// --- RUTA DINÁMICA rutas ---
 app.get('/rutas', (req, res) => {
   const filePath = path.join(pagesPath, 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
@@ -77,6 +68,7 @@ app.get('/rutas', (req, res) => {
 app.post('/api/registrar-usuario', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+
   try {
     const nombreNorm = nombre.toLowerCase();
     if (await Usuario.findOne({ nombre: nombreNorm })) {
@@ -95,12 +87,15 @@ app.post('/api/registrar-usuario', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+
   try {
     const nombreNorm = nombre.toLowerCase();
     const u = await Usuario.findOne({ nombre: nombreNorm });
     if (!u) return res.status(404).json({ error: 'Usuario no registrado' });
+
     req.session.nombre = nombreNorm;
     req.session.usuarioId = u._id;
+
     res.json({ mensaje: 'Login exitoso', usuario: { nombre: u.nombre, _id: u._id } });
   } catch (e) {
     console.error(e);
@@ -134,11 +129,13 @@ app.get('/api/perfil/:nombre', async (req, res) => {
 app.post('/sumar-punto', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+
   try {
     const nombreNorm = nombre.toLowerCase();
     let u = await Usuario.findOne({ nombre: nombreNorm });
     if (!u) u = new Usuario({ nombre: nombreNorm, puntos: 1 });
     else u.puntos += 1;
+
     await u.save();
     res.json({ mensaje: 'Punto sumado con éxito', usuario: u });
   } catch (e) {
@@ -153,6 +150,7 @@ app.post('/api/ubicaciones', async (req, res) => {
   if (!usuarioId || latitud == null || longitud == null || puntos == null) {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
+
   try {
     const nuevo = new Punto({ lat: latitud, lng: longitud, nombre: 'Punto de reciclaje', usuario: usuarioId });
     await nuevo.save();
@@ -169,6 +167,7 @@ app.delete('/api/eliminar-punto', async (req, res) => {
   if (lat == null || lng == null) {
     return res.status(400).json({ error: 'Lat y Lng requeridos' });
   }
+
   try {
     const eliminado = await Punto.findOneAndDelete({ lat, lng });
     if (!eliminado) return res.status(404).json({ error: 'Punto no encontrado' });
