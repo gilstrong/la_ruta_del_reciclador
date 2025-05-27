@@ -19,6 +19,7 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     });
 
     const data = await response.json();
+    console.log('Respuesta login:', data);
 
     if (response.ok) {
       localStorage.setItem('usuario', data.usuario.nombre);
@@ -26,6 +27,7 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
 
       alert('Inicio de sesión exitoso');
 
+      // Cambia aquí si es necesario a URL absoluta
       window.location.href = '/perfil';
     } else {
       document.getElementById('mensajeErrorLogin').textContent = data.error || 'Error desconocido';
