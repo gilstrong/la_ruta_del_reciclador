@@ -100,7 +100,7 @@ app.use('/scripts', express.static(path.join(frontendPath, 'scripts'), staticOpt
 app.use('/images', express.static(path.join(frontendPath, 'images'), staticOptions));
 app.use('/model', express.static(path.join(frontendPath, 'model'), staticOptions));
 
-// --- Rutas HTML (manual, sin dinámicas) ---
+// --- Rutas HTML ---
 const renderPage = (page) => (req, res) =>
   res.sendFile(path.join(pagesPath, `${page}.html`));
 
@@ -111,7 +111,6 @@ app.get('/login', renderPage('login'));
 app.get('/perfil', renderPage('perfil'));
 app.get('/residuos', renderPage('residuos'));
 
-// --- Página especial: /rutas ---
 app.get('/rutas', (req, res) => {
   const filePath = path.join(pagesPath, 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
@@ -140,20 +139,14 @@ app.post('/api/registrar-usuario', async (req, res) => {
   try {
     const { nombre } = req.body;
     if (!nombre || typeof nombre !== 'string' || nombre.trim().length < 3) {
-      return res.status(400).json({
-        success: false,
-        error: 'Nombre inválido. Debe tener al menos 3 caracteres'
-      });
+      return res.status(400).json({ success: false, error: 'Nombre inválido. Debe tener al menos 3 caracteres' });
     }
 
     const nombreNorm = nombre.trim().toLowerCase();
     const usuarioExistente = await Usuario.findOne({ nombre: nombreNorm });
 
     if (usuarioExistente) {
-      return res.status(409).json({
-        success: false,
-        error: 'El usuario ya existe'
-      });
+      return res.status(409).json({ success: false, error: 'El usuario ya existe' });
     }
 
     const nuevoUsuario = new Usuario({ nombre: nombreNorm, puntos: 0 });
@@ -181,10 +174,48 @@ app.post('/api/registrar-usuario', async (req, res) => {
     });
   } catch (error) {
     console.error('Error al registrar usuario:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error interno al registrar usuario'
+    res.status(500).json({ success: false, error: 'Error interno al registrar usuario' });
+  }
+});
+
+// ✅ NUEVA RUTA DE LOGIN
+app.post('/api/login', async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre || typeof nombre !== 'string' || nombre.trim().length < 3) {
+      return res.status(400).json({ success: false, error: 'Nombre inválido' });
+    }
+
+    const nombreNorm = nombre.trim().toLowerCase();
+    const usuario = await Usuario.findOne({ nombre: nombreNorm });
+
+    if (!usuario) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    req.session.nombre = nombreNorm;
+    req.session.usuarioId = usuario._id;
+
+    res.cookie('sessionId', req.sessionID, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000
     });
+
+    res.status(200).json({
+      success: true,
+      mensaje: 'Inicio de sesión exitoso',
+      usuario: {
+        _id: usuario._id,
+        nombre: usuario.nombre,
+        puntos: usuario.puntos
+      },
+      sessionId: req.sessionID
+    });
+  } catch (error) {
+    console.error('Error en login:', error);
+    res.status(500).json({ success: false, error: 'Error interno al iniciar sesión' });
   }
 });
 
@@ -215,7 +246,6 @@ const rutas = app._router.stack
   .filter(r => r.route)
   .map(r => r.route.path);
 console.log('📦 Rutas registradas:', rutas);
-
 
 // --- Servidor ---
 const port = process.env.PORT || 3000;
