@@ -1,7 +1,7 @@
-// --- db.js ---
 const mongoose = require('mongoose');
 
-const connectDB = async (uri) => {
+const connectDB = async () => {
+  const uri = process.env.MONGO_URI;  // Lee directamente la variable de entorno aquí
   try {
     if (!uri) throw new Error('MONGO_URI no está definida');
     
@@ -9,12 +9,11 @@ const connectDB = async (uri) => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
-      bufferCommands: false // Desactiva el buffering
+      bufferCommands: false
     });
 
     console.log('✅ MongoDB conectado');
     
-    // Manejo de eventos de conexión
     mongoose.connection.on('error', err => {
       console.error('❌ Error de MongoDB:', err);
     });
