@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.html",
+  "main": "index.js",
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js",
@@ -28,7 +28,6 @@
     "mongoose": "^8.14.1",
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
-    "node-fetch": "^3.3.2",
-    "path-to-regexp": "^8.2.0"
+    "node-fetch": "^3.3.2"
   }
 }
