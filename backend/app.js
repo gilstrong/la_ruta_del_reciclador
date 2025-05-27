@@ -1,8 +1,10 @@
+// --- app.js ---
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const connectDB = require('./db');
 const Usuario = require('./usuario');
@@ -10,23 +12,32 @@ const Punto = require('./punto');
 
 const app = express();
 
-// --- CORS Configurado correctamente ---
+// --- Configuración de CORS ---
 const corsOptions = {
   origin: 'https://larutadelreciclador.netlify.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
-
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Habilita preflight
+app.options('*', cors(corsOptions)); // Habilita preflight en todas las rutas
 
 // --- Middlewares ---
 app.use(express.json());
 app.use(session({
-  secret: 'mi_clave_secreta',
+  secret: process.env.SESSION_SECRET || 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions'
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 // 1 día
+  }
 }));
 
 // --- Conexión a MongoDB ---
@@ -37,30 +48,33 @@ connectDB()
     process.exit(1);
   });
 
-// --- Archivos estáticos ---
+// --- Servir archivos estáticos ---
 const frontendPath = path.join(__dirname, '..', 'frontend');
 app.use('/styles', express.static(path.join(frontendPath, 'styles')));
 app.use('/scripts', express.static(path.join(frontendPath, 'scripts')));
 app.use('/images', express.static(path.join(frontendPath, 'images')));
 app.use('/model', express.static(path.join(frontendPath, 'model')));
 
-// --- Rutas HTML ---
+// --- Rutas HTML estáticas y redirecciones ---
 const pagesPath = path.join(frontendPath, 'pages');
 const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
 páginas.forEach(p => {
-  app.get(`/${p}`, (req, res) => res.sendFile(path.join(pagesPath, `${p}.html`)));
-  app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
+  app.get(`/${p}`, (req, res) => {
+    res.sendFile(path.join(pagesPath, `${p}.html`));
+  });
+  app.get(`/${p}.html`, (req, res) => {
+    res.redirect(`/${p}`);
+  });
 });
 
-// --- RUTA DINÁMICA rutas ---
+// --- Ruta dinámica para /rutas ---
 app.get('/rutas', (req, res) => {
   const filePath = path.join(pagesPath, 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
     if (err) return res.status(500).send('Error cargando rutas.html');
     const username = req.session.nombre || '';
     const script = `<script>window.USUARIO = ${JSON.stringify(username)};</script>`;
-    const result = html.replace('</head>', `${script}\n</head>`);
-    res.send(result);
+    res.send(html.replace('</head>', `${script}\n</head>`));
   });
 });
 
@@ -68,7 +82,6 @@ app.get('/rutas', (req, res) => {
 app.post('/api/registrar-usuario', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
-
   try {
     const nombreNorm = nombre.toLowerCase();
     if (await Usuario.findOne({ nombre: nombreNorm })) {
@@ -87,15 +100,12 @@ app.post('/api/registrar-usuario', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
-
   try {
     const nombreNorm = nombre.toLowerCase();
     const u = await Usuario.findOne({ nombre: nombreNorm });
     if (!u) return res.status(404).json({ error: 'Usuario no registrado' });
-
     req.session.nombre = nombreNorm;
     req.session.usuarioId = u._id;
-
     res.json({ mensaje: 'Login exitoso', usuario: { nombre: u.nombre, _id: u._id } });
   } catch (e) {
     console.error(e);
@@ -126,16 +136,14 @@ app.get('/api/perfil/:nombre', async (req, res) => {
 });
 
 // --- API: Sumar punto ---
-app.post('/sumar-punto', async (req, res) => {
+app.post('/api/sumar-punto', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
-
   try {
     const nombreNorm = nombre.toLowerCase();
     let u = await Usuario.findOne({ nombre: nombreNorm });
     if (!u) u = new Usuario({ nombre: nombreNorm, puntos: 1 });
     else u.puntos += 1;
-
     await u.save();
     res.json({ mensaje: 'Punto sumado con éxito', usuario: u });
   } catch (e) {
@@ -150,7 +158,6 @@ app.post('/api/ubicaciones', async (req, res) => {
   if (!usuarioId || latitud == null || longitud == null || puntos == null) {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
-
   try {
     const nuevo = new Punto({ lat: latitud, lng: longitud, nombre: 'Punto de reciclaje', usuario: usuarioId });
     await nuevo.save();
@@ -167,7 +174,6 @@ app.delete('/api/eliminar-punto', async (req, res) => {
   if (lat == null || lng == null) {
     return res.status(400).json({ error: 'Lat y Lng requeridos' });
   }
-
   try {
     const eliminado = await Punto.findOneAndDelete({ lat, lng });
     if (!eliminado) return res.status(404).json({ error: 'Punto no encontrado' });
