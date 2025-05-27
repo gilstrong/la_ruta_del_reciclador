@@ -11,20 +11,35 @@ const cors = require('cors');
 
 const app = express();
 
-// --- Middleware ---
-app.use(cors({
+// --- Configuración CORS ---
+const corsOptions = {
   origin: 'https://larutadelreciclador.netlify.app',
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
+// Responder explícitamente a OPTIONS (preflight)
+app.options('*', cors(corsOptions));
+
+// --- Middleware ---
 app.use(express.json());
+
 app.use(session({
   secret: 'mi_clave_secreta',
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: false, // Mejor evitar guardar sesión vacía
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // HTTPS en prod
+    httpOnly: true,
+    sameSite: 'lax' // Ajusta si usas frontend en otro dominio
+  }
 }));
 
 // --- Conexión a MongoDB ---
-connectDB()
+connectDB(process.env.MONGO_URI)
   .then(() => console.log('✅ Conectado a MongoDB'))
   .catch(err => {
     console.error('❌ Error conectando a MongoDB:', err);
@@ -40,7 +55,7 @@ app.use('/model', express.static(path.join(frontendPath, 'model')));
 
 // --- Rutas HTML y redirecciones ---
 const pagesPath = path.join(frontendPath, 'pages');
-const páginas = ['index','mapa','registro','login','perfil','residuos','rutas'];
+const páginas = ['index', 'mapa', 'registro', 'login', 'perfil', 'residuos', 'rutas'];
 páginas.forEach(p => {
   app.get(`/${p}`, (req, res) => res.sendFile(path.join(pagesPath, `${p}.html`)));
   app.get(`/${p}.html`, (req, res) => res.redirect(`/${p}`));
