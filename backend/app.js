@@ -211,6 +211,12 @@ app.use((req, res) => {
   res.status(404).sendFile(path.join(pagesPath, '404.html'));
 });
 
+const rutas = app._router.stack
+  .filter(r => r.route)
+  .map(r => r.route.path);
+console.log('📦 Rutas registradas:', rutas);
+
+
 // --- Servidor ---
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
