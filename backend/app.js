@@ -100,7 +100,7 @@ app.use('/scripts', express.static(path.join(frontendPath, 'scripts'), staticOpt
 app.use('/images', express.static(path.join(frontendPath, 'images'), staticOptions));
 app.use('/model', express.static(path.join(frontendPath, 'model'), staticOptions));
 
-// --- Rutas HTML ---
+// --- Rutas HTML (manuales) ---
 const renderPage = (page) => (req, res) =>
   res.sendFile(path.join(pagesPath, `${page}.html`));
 
@@ -111,6 +111,7 @@ app.get('/login', renderPage('login'));
 app.get('/perfil', renderPage('perfil'));
 app.get('/residuos', renderPage('residuos'));
 
+// --- Página personalizada: rutas ---
 app.get('/rutas', (req, res) => {
   const filePath = path.join(pagesPath, 'rutas.html');
   fs.readFile(filePath, 'utf8', (err, html) => {
@@ -178,12 +179,13 @@ app.post('/api/registrar-usuario', async (req, res) => {
   }
 });
 
-// ✅ NUEVA RUTA DE LOGIN
+// ✅ Ruta que estaba faltando y usas en el frontend
 app.post('/api/login', async (req, res) => {
   try {
     const { nombre } = req.body;
-    if (!nombre || typeof nombre !== 'string' || nombre.trim().length < 3) {
-      return res.status(400).json({ success: false, error: 'Nombre inválido' });
+
+    if (!nombre || typeof nombre !== 'string') {
+      return res.status(400).json({ success: false, error: 'Nombre requerido' });
     }
 
     const nombreNorm = nombre.trim().toLowerCase();
@@ -193,7 +195,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
     }
 
-    req.session.nombre = nombreNorm;
+    req.session.nombre = usuario.nombre;
     req.session.usuarioId = usuario._id;
 
     res.cookie('sessionId', req.sessionID, {
@@ -203,7 +205,7 @@ app.post('/api/login', async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    res.status(200).json({
+    res.json({
       success: true,
       mensaje: 'Inicio de sesión exitoso',
       usuario: {
@@ -214,11 +216,12 @@ app.post('/api/login', async (req, res) => {
       sessionId: req.sessionID
     });
   } catch (error) {
-    console.error('Error en login:', error);
-    res.status(500).json({ success: false, error: 'Error interno al iniciar sesión' });
+    console.error('Error al iniciar sesión:', error);
+    res.status(500).json({ success: false, error: 'Error interno en inicio de sesión' });
   }
 });
 
+// --- CORS test ---
 app.get('/api/test-cors', (req, res) => {
   res.json({
     success: true,
@@ -227,7 +230,7 @@ app.get('/api/test-cors', (req, res) => {
   });
 });
 
-// --- Errores y 404 ---
+// --- Manejadores de errores ---
 app.use((err, req, res, next) => {
   console.error('Error no manejado:', err.stack);
   res.status(500).json({
@@ -238,16 +241,12 @@ app.use((err, req, res, next) => {
   });
 });
 
+// --- 404 ---
 app.use((req, res) => {
   res.status(404).sendFile(path.join(pagesPath, '404.html'));
 });
 
-const rutas = app._router.stack
-  .filter(r => r.route)
-  .map(r => r.route.path);
-console.log('📦 Rutas registradas:', rutas);
-
-// --- Servidor ---
+// --- Iniciar servidor ---
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
@@ -255,6 +254,7 @@ const server = app.listen(port, () => {
   console.log(`Orígenes CORS permitidos: ${corsOptions.origin.join(', ')}`);
 });
 
+// --- Apagado limpio ---
 const shutdown = (signal) => {
   console.log(`Recibido ${signal}. Cerrando servidor...`);
   server.close(() => {
